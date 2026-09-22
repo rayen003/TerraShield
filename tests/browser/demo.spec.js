@@ -39,6 +39,14 @@ test('complete live pitch journey and reset', async ({ page }) => {
   await page.getByRole('button', { name: 'View mitigation report', exact: true }).click();
   await expect(page.locator('.report-document')).toContainText('Illustrative demo report');
   await expect(page.locator('.report-outstanding')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Review insurance packet', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('Nothing is sent automatically');
+  await page.getByLabel('Insurer or agent name Optional', { exact: true }).fill('Demo Mutual');
+  await page.getByLabel('Email address Optional', { exact: true }).fill('agent@example.com');
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Approve packet for sharing', exact: true }).click();
+  await expect(page.locator('.insurance-packet')).toContainText('Packet ready for your review');
+  await expect(page.getByRole('button', { name: 'Prepare email to insurer', exact: true })).toBeVisible();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download JSON', exact: true }).click();
   const download = await downloadPromise;
