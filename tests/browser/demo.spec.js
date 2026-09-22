@@ -51,6 +51,15 @@ test('complete live pitch journey and reset', async ({ page }) => {
   await page.getByRole('button', { name: 'Approve packet for sharing', exact: true }).click();
   await expect(page.locator('.insurance-packet')).toContainText('Packet ready for your review');
   await expect(page.getByRole('button', { name: 'Prepare email to insurer', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Generate PDF report', exact: true }).click();
+  await expect(page.locator('.pdf-export')).toContainText('Report generated');
+  await page.getByRole('button', { name: 'Preview PDF', exact: true }).click();
+  await expect(page.getByRole('dialog').locator('.pdf-preview')).toBeVisible();
+  await page.getByRole('button', { name: 'Back to report', exact: true }).click();
+  const pdfDownloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download PDF', exact: true }).click();
+  const pdfDownload = await pdfDownloadPromise;
+  expect(pdfDownload.suggestedFilename()).toBe('terrashield-oakridge-illustrative-report.pdf');
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download JSON', exact: true }).click();
   const download = await downloadPromise;

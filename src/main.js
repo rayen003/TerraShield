@@ -7,12 +7,14 @@ import { icon, escape as e } from './icons.js';
 import { mountMap, destroyMap } from './map.js';
 import { houseIllustration } from './illustrations.js';
 import { prompts, answer } from './assistant.js';
+import { generateIllustrativeReportPdf } from './report-pdf.js';
 
 const STORAGE_KEY = 'terrashield-demo-v1';
 let storageWarning = '';
 let state = readState();
 let view = 'workspace', tab = 'overview', assistantOpen = false, propertyMenuOpen = false, search = '', filter = 'all', riskFilter = 'all';
 const localFiles = new Map();
+const pdfPreviews = new Map();
 let toastTimeout;
 const app = document.getElementById('app');
 const current = () => state.properties.find(p => p.id === state.selected);
@@ -93,7 +95,8 @@ function report(p) {
   if (!p.reports.length) return reports();
   const r = reportSummary(p);
   const packet = p.insurancePacket;
-  return `<main class="report-main"><div class="report-toolbar">${btn('Return to property','return-property','text-button','home')}<div>${btn('Download JSON','download-report','secondary','download')}${btn('Print / Save as PDF','print-report','primary','print')}</div></div><article class="report-document"><div class="report-brand"><span class="brand">${icon('shield')}TerraShield</span>${badge('Illustrative demo report','demo')}</div><div class="report-title"><div><p class="muted">Mitigation & evidence review</p><h1>${e(p.name)}</h1><p>Fictional property record · ${e(p.location)}</p></div><span class="report-seal">${icon('shield')}<strong>2 changes</strong><span>verified in demo</span></span></div><div class="report-dates"><div><span>Baseline assessment</span><strong>${date(BASELINE_DATE)}</strong></div><div><span>Prepared follow-up evidence</span><strong>${date(FOLLOWUP_DATE)}</strong></div><div><span>Follow-up assessment</span><strong>${date(p.assessmentDate)}</strong></div></div><section class="report-scores"><div><span>Baseline modeled index</span><strong>82<small>/100</small></strong>${badge('Elevated','elevated')}</div><span class="report-score-arrow">→</span><div><span>Updated modeled index</span><strong>58<small>/100</small></strong>${badge('Moderate','moderate')}</div><p>24-point index change.<br>Illustrative model recalculation after documented changes. Remaining exposure and evidence gaps still apply.</p></section><section class="insurance-packet ${packet ? 'approved' : ''}"><div><span class="packet-kicker">Owner-reviewed insurer packet</span><h2>${packet ? 'Packet ready for your review' : 'Make this ready for your insurer'}</h2><p>${packet ? `Owner details confirmed${packet.insurerName ? ` for ${e(packet.insurerName)}` : ''}. Review before opening email draft.` : 'TerraShield compiles verified changes, dates, evidence, score context, and remaining gaps. You control what happens next.'}</p></div><div class="packet-status">${packet ? statusIcon('check','Owner reviewed') : statusIcon('info','Owner review required')}</div>${packet ? btn('Prepare email to insurer','prepare-insurer-email','secondary','mail') : btn('Review insurance packet','review-insurance-packet','primary','shield')}</section><p class="report-definition">${SCORE_DEFINITION}</p><h2>Verified observable changes</h2><div class="report-changes"><p>${icon('check')}Near-building vegetation change confirmed in prepared sample evidence.</p><p>${icon('check')}Combustible stored items removed from the exterior wall area in prepared sample evidence.</p></div>${comparison()}<h2>Outstanding actions & evidence gaps</h2>${unresolved(p).map(a => `<div class="report-outstanding"><span>${icon('clock')}</span><div><strong>${e(a.fullTitle)}</strong><p>${e(a.required)}</p></div>${badge('Outstanding','amber')}</div>`).join('')}<p>Roof and vent specifications remain unverified. Aerial context does not establish small construction details.</p><h2>Evidence sources & dates</h2><table class="report-evidence-table"><thead><tr><th>Evidence</th><th>Source</th><th>Evidence date</th></tr></thead><tbody>${r.evidence.map(item => `<tr><td>${e(item.name)}<small>${e(item.status)}</small></td><td>${e(item.source)}</td><td>${date(item.date)}</td></tr>`).join('')}</tbody></table><h2>Review method</h2><p>Simulated review using prepared demonstration evidence. No computer-vision model was run. Only the two prepared observable changes are verified in this demo.</p><footer class="report-disclaimer">${e(r.closingNote)}</footer></article></main>`;
+  const pdf = pdfPreviews.get(p.id);
+  return `<main class="report-main"><div class="report-toolbar">${btn('Return to property','return-property','text-button','home')}<div>${btn('Download JSON','download-report','secondary','download')}${btn('Print / Save as PDF','print-report','primary','print')}</div></div><article class="report-document"><div class="report-brand"><span class="brand">${icon('shield')}TerraShield</span>${badge('Illustrative demo report','demo')}</div><div class="report-title"><div><p class="muted">Mitigation & evidence review</p><h1>${e(p.name)}</h1><p>Fictional property record · ${e(p.location)}</p></div><span class="report-seal">${icon('shield')}<strong>2 changes</strong><span>verified in demo</span></span></div><div class="report-dates"><div><span>Baseline assessment</span><strong>${date(BASELINE_DATE)}</strong></div><div><span>Prepared follow-up evidence</span><strong>${date(FOLLOWUP_DATE)}</strong></div><div><span>Follow-up assessment</span><strong>${date(p.assessmentDate)}</strong></div></div><section class="report-scores"><div><span>Baseline modeled index</span><strong>82<small>/100</small></strong>${badge('Elevated','elevated')}</div><span class="report-score-arrow">→</span><div><span>Updated modeled index</span><strong>58<small>/100</small></strong>${badge('Moderate','moderate')}</div><p>24-point index change.<br>Illustrative model recalculation after documented changes. Remaining exposure and evidence gaps still apply.</p></section><section class="insurance-packet ${packet ? 'approved' : ''}"><div><span class="packet-kicker">Owner-reviewed insurer packet</span><h2>${packet ? 'Packet ready for your review' : 'Make this ready for your insurer'}</h2><p>${packet ? `Owner details confirmed${packet.insurerName ? ` for ${e(packet.insurerName)}` : ''}. Review before opening email draft.` : 'TerraShield compiles verified changes, dates, evidence, score context, and remaining gaps. You control what happens next.'}</p></div><div class="packet-status">${packet ? statusIcon('check','Owner reviewed') : statusIcon('info','Owner review required')}</div>${packet ? btn('Prepare email to insurer','prepare-insurer-email','secondary','mail') : btn('Review insurance packet','review-insurance-packet','primary','shield')}</section>${packet ? `<section class="pdf-export ${pdf ? "ready" : ""}"><div><span class="packet-kicker">PDF attachment</span><h2>${pdf ? "Report generated" : "Generate report PDF"}</h2><p>${pdf ? "PDF ready for preview. Confirm it before download or insurer attachment." : "Create a structured illustrative PDF from this approved packet."}</p></div>${pdf ? `<div class="pdf-actions"><button class="button secondary" data-action="preview-pdf">Preview PDF</button><button class="button primary" data-action="download-pdf">Download PDF</button></div>` : `<button class="button primary" data-action="generate-pdf">Generate PDF report</button>`}</section>` : ""}<p class="report-definition">${SCORE_DEFINITION}</p><h2>Verified observable changes</h2><div class="report-changes"><p>${icon('check')}Near-building vegetation change confirmed in prepared sample evidence.</p><p>${icon('check')}Combustible stored items removed from the exterior wall area in prepared sample evidence.</p></div>${comparison()}<h2>Outstanding actions & evidence gaps</h2>${unresolved(p).map(a => `<div class="report-outstanding"><span>${icon('clock')}</span><div><strong>${e(a.fullTitle)}</strong><p>${e(a.required)}</p></div>${badge('Outstanding','amber')}</div>`).join('')}<p>Roof and vent specifications remain unverified. Aerial context does not establish small construction details.</p><h2>Evidence sources & dates</h2><table class="report-evidence-table"><thead><tr><th>Evidence</th><th>Source</th><th>Evidence date</th></tr></thead><tbody>${r.evidence.map(item => `<tr><td>${e(item.name)}<small>${e(item.status)}</small></td><td>${e(item.source)}</td><td>${date(item.date)}</td></tr>`).join('')}</tbody></table><h2>Review method</h2><p>Simulated review using prepared demonstration evidence. No computer-vision model was run. Only the two prepared observable changes are verified in this demo.</p><footer class="report-disclaimer">${e(r.closingNote)}</footer></article></main>`;
 }
 function statusIcon(name, label) { return `<span>${icon(name)}${e(label)}</span>`; }
 function assistantMarkup(p) {
@@ -130,6 +133,21 @@ function insurerEmailDraft(p) {
   const body = `Hello${name},\n\nI am sharing an illustrative TerraShield mitigation evidence packet for ${p.name}. It includes documented changes, evidence dates, an illustrative modeled assessment, and outstanding items for your review.\n\nPlease let me know if you need anything else.\n\nThank you`;
   window.location.href = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   toast('Email draft opened. Nothing was sent by TerraShield.');
+}
+function generatePdf(p) {
+  const prior = pdfPreviews.get(p.id);
+  if (prior) URL.revokeObjectURL(prior.url);
+  const blob = generateIllustrativeReportPdf(reportSummary(p));
+  pdfPreviews.set(p.id, { url: URL.createObjectURL(blob), filename: `terrashield-${p.id}-illustrative-report.pdf` });
+  render(); toast('Report generated. Preview it before download or attachment.');
+}
+function previewPdf(p) {
+  const pdf = pdfPreviews.get(p.id); if (!pdf) return;
+  modal('PDF report preview', `<p class="muted">Illustrative locally generated attachment. Review before download or insurer sharing.</p><iframe class="pdf-preview" src="${pdf.url}" title="Illustrative report PDF preview"></iframe>`, `<button class="button secondary" data-action="download-pdf">Download PDF</button><button class="button primary" data-action="close-modal">Back to report</button>`);
+}
+function downloadPdf(p) {
+  const pdf = pdfPreviews.get(p.id); if (!pdf) return;
+  const a = document.createElement('a'); a.href = pdf.url; a.download = pdf.filename; a.click(); toast('PDF downloaded.');
 }
 function showEvidence(action) {
   const p = current(), a = p.actions.find(a => a.id === action);
@@ -205,6 +223,9 @@ app.addEventListener('click', event => {
     case 'open-report': if (p.reports.length) { view = 'report'; render(); } else toast('A report becomes available after the prepared review.'); break;
     case 'review-insurance-packet': insurancePacketModal(p); break;
     case 'prepare-insurer-email': insurerEmailDraft(p); break;
+    case 'generate-pdf': generatePdf(p); break;
+    case 'preview-pdf': previewPdf(p); break;
+    case 'download-pdf': downloadPdf(p); break;
     case 'return-property': view='workspace'; tab='overview'; render(); break;
     case 'start-report': state.selected='oakridge'; view='workspace'; tab='evidence'; save(); render(); break;
     case 'print-report': window.print(); break;
@@ -219,6 +240,7 @@ app.addEventListener('click', event => {
 });
 function resetDemo() {
   localFiles.forEach(f => URL.revokeObjectURL(f.url)); localFiles.clear(); state = createInitialState();
+  pdfPreviews.forEach(f => URL.revokeObjectURL(f.url)); pdfPreviews.clear();
   try { localStorage.removeItem(STORAGE_KEY); } catch { storageWarning = 'Browser storage could not be cleared. Current session has been reset.'; }
   view='workspace'; tab='overview'; assistantOpen=false; propertyMenuOpen=false; search=''; filter='all'; riskFilter='all'; render(); toast('Demo reset. Oakridge is back to its baseline.');
 }
