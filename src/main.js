@@ -25,7 +25,7 @@ const btn = (label, action, cls = '', symbol = '') => `<button class="button ${c
 function readState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (parsed?.version === 1 && parsed.properties?.length === 5 && parsed.properties.every(p => Array.isArray(p.actions) && Array.isArray(p.evidence)) && parsed.properties.some(p => p.id === parsed.selected)) return parsed;
+    if (parsed?.version === 1 && parsed.properties?.length === 5 && parsed.properties.every(p => Array.isArray(p.actions) && Array.isArray(p.evidence) && p.exposureAssessment && Array.isArray(p.observations) && p.observations.every(o => o.findingStatus)) && parsed.properties.some(p => p.id === parsed.selected)) return parsed;
   } catch { storageWarning = 'Saved demo could not be loaded. A fresh session is ready.'; }
   return createInitialState();
 }
