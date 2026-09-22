@@ -1,7 +1,7 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { terrainSVG } from './illustrations.js';
-import { category } from './data.js';
+import { exposureCategory } from './data.js';
 import { escape, icon } from './icons.js';
 let map;
 export function destroyMap() { if (map) { map.remove(); map = null; } }
@@ -44,9 +44,9 @@ export function mountMap(properties, selected, portfolio, onSelect) {
     L.circle([lat+d*2,lng+d*2.5], { radius: 145, color: '#b38277', weight: 1, dashArray: '3 7', fillColor: '#c58d7d', fillOpacity: .12 }).addTo(groups.exposure);
     L.rectangle([[lat-d*.42,lng-d*.6],[lat+d*.38,lng+d*.55]], { color: prop.verification === 'Verified in demo' ? '#527b60' : '#bc9951', weight: 2, fillColor: '#dbc78a', fillOpacity: .35 }).addTo(groups.mitigation);
     L.polygon([[lat-.00013,lng-.00024],[lat+.00017,lng-.00018],[lat+.00012,lng+.00022],[lat-.00018,lng+.00016]], { color: '#777b72', weight: 1.5, fillColor: '#b8b6aa', fillOpacity: 1 }).addTo(map);
-    const marker = L.marker([lat,lng], { title: prop.name, alt: `Select ${prop.name}, ${category(prop.score)}, ${prop.score}`, icon: L.divIcon({ className: `property-marker ${prop.id === selected ? 'selected' : ''}`, html: `<span>${icon('home')}</span>`, iconSize: [38,44], iconAnchor: [19,42] }), keyboard: true });
+    const marker = L.marker([lat,lng], { title: prop.name, alt: `Select ${prop.name}, ${exposureCategory(prop)} surrounding wildfire exposure`, icon: L.divIcon({ className: `property-marker ${prop.id === selected ? 'selected' : ''}`, html: `<span>${icon('home')}</span>`, iconSize: [38,44], iconAnchor: [19,42] }), keyboard: true });
     marker.addTo(map).on('click', () => onSelect(prop.id));
-    if (prop.id === selected || portfolio) marker.bindTooltip(`<strong>${escape(prop.name)}</strong><span>${prop.score} / 100 · ${category(prop.score)}</span>`, { permanent: !portfolio, direction: 'top', offset: [0,-43], className: 'property-tooltip' });
+    if (prop.id === selected || portfolio) marker.bindTooltip(`<strong>${escape(prop.name)}</strong><span>${exposureCategory(prop)} surrounding exposure · illustrative</span>`, { permanent: !portfolio, direction: 'top', offset: [0,-43], className: 'property-tooltip' });
   });
   const fit = () => portfolio ? map.fitBounds(properties.map(p => [p.lat,p.lng]), { padding: [60,65] }) : map.setView([p.lat+.0002,p.lng], 17);
   // Keep an offline schematic beneath the real street tiles as a presentation fallback.

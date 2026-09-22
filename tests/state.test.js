@@ -1,34 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createInitialState, category, summary, loadPrepared, applyReview, reportSummary, unresolved, useRecommendedPlan, startWork, markOwnerComplete } from '../src/data.js';
+import { createInitialState, category, exposureCategory, evidenceCoverage, summary, loadPrepared, applyReview, reportSummary, unresolved, useRecommendedPlan, startWork, markOwnerComplete } from '../src/data.js';
 import { answer } from '../src/assistant.js';
 
 test('complete Oakridge journey keeps assessment, portfolio, report, and reset consistent', () => {
   const state = createInitialState(), oak = state.properties[0];
-  assert.deepEqual(summary(state.properties), {total:5,elevated:3,pending:1,verified:0});
+  assert.deepEqual(summary(state.properties), {total:5,elevated:3,pending:1,verified:0,incomplete:5});
   assert.equal(applyReview(oak), false);
-  assert.equal(oak.score,82);
+  assert.equal(exposureCategory(oak),'Elevated');
   assert.equal(loadPrepared(oak),true);
-  assert.equal(oak.score,82);
   assert.equal(summary(state.properties).pending,2);
   assert.equal(loadPrepared(oak),false);
   assert.equal(applyReview(oak),true);
-  assert.equal(oak.score,58);
-  assert.equal(category(oak.score),'Moderate');
+  assert.equal(exposureCategory(oak),'Elevated');
+  assert.equal(oak.observations.filter(o=>o.findingStatus==='Change verified').length,2);
   assert.equal(oak.workflow,'Follow-up needed');
   assert.deepEqual(unresolved(oak).map(a=>a.id),['C','D']);
-  assert.deepEqual(summary(state.properties),{total:5,elevated:2,pending:1,verified:1});
+  assert.deepEqual(summary(state.properties),{total:5,elevated:3,pending:1,verified:1,incomplete:5});
   assert.equal(applyReview(oak),false);
   assert.equal(oak.history.length,1);
   const report=reportSummary(oak);
-  assert.equal(report.updatedModeledScore,58);
+  assert.equal(report.exposureAssessment.category,'Elevated');
   assert.equal(report.verifiedChanges.length,2);
   assert.equal(report.outstandingActions.length,2);
   const flagged = answer('Why is this property flagged?',oak).text;
-  assert.match(flagged,/baseline observations from August 15/);
-  assert.match(flagged,/addressed in prepared September 15 evidence/);
-  assert.match(flagged,/Remaining concern includes surrounding vegetation/);
-  assert.equal(createInitialState().properties[0].score,82);
+  assert.match(flagged,/Surrounding wildfire exposure is elevated/);
+  assert.equal(evidenceCoverage(oak).label,'Partial');
 });
 test('arbitrary uploads remain pending even after prepared review', () => {
   const p=createInitialState().properties[0];
@@ -52,7 +49,7 @@ test('assistant grounds context, avoids insurance promises, and does not mutate 
   const p=createInitialState().properties[1], before=JSON.stringify(p);
   assert.match(answer('Why is this property flagged?',p).text,/Dense shrubs beside the entry deck/);
   assert.match(answer('What changed after the work?',p).text,/No changes have been verified/);
-  assert.match(answer('Will this lower my insurance premium?',p).text,/cannot guarantee a discount/);
+  assert.match(answer('Will this lower my insurance premium?',p).text,/insurer decides/);
   assert.equal(answer('Create a four-week mitigation plan.',p).action,'apply-schedule');
   assert.equal(JSON.stringify(p),before);
 });

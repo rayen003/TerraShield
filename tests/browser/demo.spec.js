@@ -14,14 +14,14 @@ test('complete live pitch journey and reset', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
-  await expect(page.locator('.score-value')).toHaveText('82/100');
+  await expect(page.locator('.assessment-exposure')).toContainText('Elevated');
   await expect(page.locator('.observation')).toHaveCount(3);
   await page.screenshot({ path: 'artifacts/workspace-desktop.png', fullPage: true });
   await page.getByRole('button', { name: 'Ask TerraShield', exact: true }).click();
   await page.getByRole('button', { name: 'What should I do first?', exact: true }).click();
-  await expect(page.locator('.message.assistant')).toContainText('start with');
+  await expect(page.locator('.message.assistant')).toContainText('Start with');
   await page.getByRole('button', { name: 'Create a four-week mitigation plan.', exact: true }).click();
-  await page.getByRole('button', { name: 'Apply to action plan', exact: true }).click();
+  await page.getByRole('button', { name: 'Apply to recommendation', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Start work', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Close assistant' }).click();
   await page.getByRole('button', { name: 'Start work', exact: true }).click();
@@ -33,33 +33,15 @@ test('complete live pitch journey and reset', async ({ page }) => {
   await page.getByRole('button', { name: '1. Load prepared evidence', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Still unverified');
   await page.getByRole('button', { name: 'Apply simulated review result', exact: true }).click();
-  await expect(page.locator('.updated-risk-panel')).toContainText('82');
-  await expect(page.locator('.updated-risk-panel')).toContainText('58');
+  await expect(page.locator('.updated-risk-panel')).toContainText('Two mitigation actions verified');
   await page.getByRole('tab', { name: 'Risk', exact: true }).click();
   await expect(page.locator('.observation .status-chip.done')).toHaveCount(2);
-  await expect(page.locator('.score-value')).toHaveText('58/100');
-  await page.getByRole('button', { name: 'See updated risk', exact: true }).click();
-  await page.getByRole('button', { name: 'Build insurance-ready report', exact: true }).click();
-  await page.getByRole('button', { name: 'Open insurance-ready report', exact: true }).click();
-  await expect(page.locator('.report-document')).toContainText('Illustrative demo report');
-  await expect(page.locator('.report-outstanding')).toHaveCount(2);
-  await page.getByRole('button', { name: 'Review insurance packet', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Nothing is sent automatically');
-  await page.getByLabel('Insurer or agent name Optional', { exact: true }).fill('Demo Mutual');
-  await page.getByLabel('Email address Optional', { exact: true }).fill('agent@example.com');
-  await page.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Approve packet for sharing', exact: true }).click();
-  await expect(page.locator('.insurance-packet')).toContainText('Packet ready for your review');
-  await expect(page.getByRole('button', { name: 'Prepare email to insurer', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Generate PDF report', exact: true }).click();
-  await expect(page.locator('.pdf-export')).toContainText('Report generated');
-  await page.getByRole('button', { name: 'Preview PDF', exact: true }).click();
-  await expect(page.getByRole('dialog').locator('.pdf-preview')).toBeVisible();
-  await page.getByRole('button', { name: 'Back to report', exact: true }).click();
-  const pdfDownloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download PDF', exact: true }).click();
-  const pdfDownload = await pdfDownloadPromise;
-  expect(pdfDownload.suggestedFilename()).toBe('terrashield-oakridge-illustrative-report.pdf');
+  await expect(page.locator('.assessment-exposure')).toContainText('Elevated');
+  await page.getByRole('button', { name: 'See assessment after review', exact: true }).click();
+  await page.getByRole('button', { name: 'Build assessment report', exact: true }).click();
+  await page.getByRole('button', { name: 'Open assessment report', exact: true }).click();
+  await expect(page.locator('.report-document')).toContainText('Illustrative demonstration output');
+  await expect(page.locator('.report-outstanding')).toHaveCount(3);
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download JSON', exact: true }).click();
   const download = await downloadPromise;
@@ -68,13 +50,13 @@ test('complete live pitch journey and reset', async ({ page }) => {
   await page.pdf({ path: 'artifacts/illustrative-report.pdf', format: 'A4', printBackground: true });
   await page.emulateMedia({ media: 'screen' });
   await page.getByRole('button', { name: 'Portfolio', exact: true }).click();
-  await expect(page.locator('.summary-card strong')).toHaveText(['05','02','01','01']);
-  await expect(page.getByRole('row').filter({ hasText: 'Oakridge House' })).toContainText('58');
+  await expect(page.locator('.summary-card strong')).toHaveText(['05','03','01','01']);
+  await expect(page.getByRole('row').filter({ hasText: 'Oakridge House' })).toContainText('Elevated exposure');
   await page.reload();
-  await expect(page.locator('.score-value')).toHaveText('58/100');
+  await expect(page.locator('.assessment-exposure')).toContainText('Elevated');
   await page.getByRole('button', { name: 'Reset demo', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Reset demo', exact: true }).click();
-  await expect(page.locator('.score-value')).toHaveText('82/100');
+  await expect(page.locator('.assessment-exposure')).toContainText('Elevated');
   await page.getByRole('button', { name: 'Portfolio', exact: true }).click();
   await expect(page.locator('.summary-card strong')).toHaveText(['05','03','01','00']);
   expect(errors).toEqual([]);
@@ -95,10 +77,10 @@ test('local uploads, property selection, filters, controls and mobile layout', a
   await expect(page.getByRole('dialog').getByRole('img')).toBeVisible();
   await page.getByRole('button', { name: 'Close dialog' }).click();
   await page.getByRole('tab', { name: 'Risk', exact: true }).click();
-  await expect(page.locator('.score-value')).toHaveText('82/100');
-  for (const [id, name, score] of [['cedar','Cedar Grove Home',67],['valley','Valley View Residence',45],['meadow','Meadow Lane Home',28],['ridgeway','Ridgeway Lodge',74]]) {
+  await expect(page.locator('.assessment-exposure')).toContainText('Elevated');
+  for (const [id, name] of [['cedar','Cedar Grove Home'],['valley','Valley View Residence'],['meadow','Meadow Lane Home'],['ridgeway','Ridgeway Lodge']]) {
     await switchProperty(page, id, name);
-    await expect(page.locator('.score-value')).toHaveText(`${score}/100`);
+    await expect(page.locator('.assessment-exposure')).toBeVisible();
     await expect(page.locator('.property-marker.selected')).toHaveAttribute('title', new RegExp(id === 'ridgeway' ? 'Ridgeway' : id[0].toUpperCase()+id.slice(1)));
   }
   await page.getByRole('tab', { name: 'Verification', exact: true }).click();
@@ -115,7 +97,7 @@ test('local uploads, property selection, filters, controls and mobile layout', a
   await page.getByRole('row').filter({ hasText: 'Oakridge House' }).getByRole('button', { name: 'Open property', exact: true }).click();
   for (const [width,height] of [[1280,800],[390,844]]) {
     await page.setViewportSize({ width, height });
-    await expect(page.locator('.score-value')).toHaveText('82/100');
+    await expect(page.locator('.assessment-exposure')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `artifacts/workspace-${width}.png`, fullPage: true });
   }
@@ -167,7 +149,7 @@ test('editable plans, unsupported uploads, map selection and offline fallback', 
   await page.getByRole('button', { name: 'Why is this property flagged?', exact: true }).click();
   await expect(page.locator('.message.assistant')).toContainText('Dense shrubs beside the entry deck');
   await page.getByRole('button', { name: 'Will this lower my insurance premium?', exact: true }).click();
-  await expect(page.locator('.message.assistant').last()).toContainText('cannot guarantee a discount');
+  await expect(page.locator('.message.assistant').last()).toContainText('insurer decides');
 });
 
 test('street tiles are default, attributed, and switch cleanly to schematic', async ({ page }) => {

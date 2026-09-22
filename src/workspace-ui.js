@@ -1,5 +1,5 @@
 import { icon, escape as e } from './icons.js';
-import { category, verifiedCount, observationResolved, unresolved, priorityActions, ownerDone, BASELINE_DATE, FOLLOWUP_DATE } from './data.js';
+import { exposureCategory, evidenceCoverage, verifiedCount, observationResolved, unresolved, priorityActions, ownerDone, BASELINE_DATE, FOLLOWUP_DATE } from './data.js';
 import { houseIllustration } from './illustrations.js';
 import { phaseFor } from './phases.js';
 
@@ -34,27 +34,24 @@ function disclosure(title, content, cls = '') {
   return `<details class="disclosure ${cls}"><summary><span>${title}</span>${icon('chevron')}</summary><div class="disclosure-content">${content}</div></details>`;
 }
 export function overview(p) {
-  const reviewed = verifiedCount(p) > 0;
-  return `<div class="compact-score ${category(p.score).toLowerCase()}">
-    <div><span class="score-label">Illustrative risk index ${button('About score', 'score-info', 'score-help', 'info')}</span><span class="score-value">${p.score}<small>/100</small></span></div>
-    <div class="compact-score-context">${badge(category(p.score), category(p.score).toLowerCase())}<span>${reviewed ? 'Baseline 82 → updated 58' : 'Start with conditions near your home'}</span><small>${date(p.assessmentDate)}</small></div>
-  </div>
-  <div class="section-title"><h3>${reviewed ? 'What changed & what remains' : 'What needs attention'}</h3><span>Click to expand</span></div>
+  const reviewed = verifiedCount(p) > 0, coverage = evidenceCoverage(p), exposure = p.exposureAssessment;
+  return `<section class="assessment-exposure"><div><span>Surrounding wildfire exposure</span><h3>${e(exposureCategory(p))} <small>· Illustrative exposure category</small></h3><p>${e(exposure.geographicScope)}</p></div>${badge(exposureCategory(p), exposureCategory(p).toLowerCase())}<small>Assessment ${date(exposure.assessmentDate)} · Sample sources: ${e(exposure.sourceReferences.join(', '))}</small><p class="assessment-limit">${e(exposure.limitations)}</p></section>
+  <div class="section-title"><h3>${reviewed ? 'Observed changes & remaining items' : 'Observed property vulnerabilities'}</h3><span>Click to expand</span></div>
   <div class="threat-tickets">${p.observations.map(o => {
     const resolved = observationResolved(p, o);
     const title = p.id === 'oakridge' ? compactTitles[o.action] : o.title;
     const a = p.actions.find(a => a.id === o.action);
-    const [label, tone] = resolved ? ['Done', 'done'] : actionStatus(a);
+    const [label, tone] = resolved ? ['Change verified', 'done'] : o.findingStatus === 'Review requested' ? ['Review requested', 'review'] : o.findingStatus === 'Additional evidence needed' ? ['Additional evidence needed', 'review'] : actionStatus(a);
     return `<details class="observation threat-ticket"><summary>
       <span class="ticket-icon ${resolved || o.kind === 'context' ? 'sage-bg' : 'rose-bg'}">${icon(resolved ? 'check' : o.action === 'B' ? 'box' : 'tree')}</span>
       <span class="ticket-summary"><strong>${e(title)}</strong>${statusChip(label, tone)}</span>${icon('chevron')}
       </summary><div class="ticket-detail"><p>${e(o.title)}</p>${threatAsset(p, o)}<div class="ticket-fact"><span>What this proves</span><p>${o.kind === 'context' ? 'Vegetation context around the parcel. It does not verify small construction details.' : p.id === 'oakridge' ? 'This condition was visible in a bundled synthetic baseline illustration.' : 'This record summarizes the property observation; no matching image asset is bundled for this fictional record.'}</p></div>
-      <div class="ticket-fact"><span>${resolved ? 'Follow-up review' : 'What we know'}</span><p>${resolved ? 'Change verified from prepared Sep 15 evidence. Baseline observation retained for comparison.' : e(o.status)}</p></div>
+      <div class="ticket-fact"><span>Location & observation</span><p>${e(o.propertyArea)} · ${date(o.observedAt)} · ${resolved ? 'Change verified in prepared demo evidence.' : e(o.status)}</p></div>
       ${a ? `<div class="ticket-fact"><span>Recommended action</span><p>${e(a.fullTitle)}</p></div>` : ''}
-      ${button('View supporting evidence', `evidence-${o.action}`, 'secondary', 'camera')}</div></details>`;
+      ${button('View supporting evidence', `evidence-${o.action}`, 'secondary', 'camera')}${button('Flag an issue', `flag-${o.id}`, 'text-button', 'info')}</div></details>`;
   }).join('')}</div>
-  ${disclosure(`${icon('info')} Evidence coverage: Partial`, `<p>Roof and vent specifications have not been verified. ${reviewed ? 'Wider vegetation assessment remains outstanding.' : 'Open a threat card to see its evidence source.'}</p>`, 'compact-gap')}
-  ${footer(reviewed ? 'See updated risk' : 'Review recommendation', reviewed ? 'open-updated-risk' : 'open-plan', reviewed ? 'Then build insurer-ready report.' : '')}`;
+  <section class="assessment-summary"><div><strong>Mitigation progress</strong><p>${verifiedCount(p)} of ${p.actions.length} recommended actions verified in demo.</p><progress value="${verifiedCount(p)}" max="${p.actions.length}"></progress><small>Action completion. Not a risk reduction or safety score.</small></div><div><strong>Evidence coverage: ${coverage.label}</strong><p>${coverage.scope}</p><small>Received ${coverage.received} · Reviewed ${coverage.reviewed}</small><p>Outstanding: ${coverage.outstanding.join('; ')}</p></div></section>
+  ${footer(reviewed ? 'See assessment after review' : 'Review recommendation', reviewed ? 'open-updated-risk' : 'open-plan', reviewed ? 'Surrounding exposure remains elevated. Unresolved items remain visible.' : '')}${button('How this assessment works','assessment-info','secondary full','info')}`;
 }
 
 function actionDetails(a) {
@@ -115,11 +112,11 @@ export function evidence(p) {
 }
 export function updatedRisk(p) {
   const ready = verifiedCount(p) > 0;
-  return ready ? `<div class="updated-risk-panel"><div class="panel-intro"><div><h3>Updated modeled risk</h3><p>Recalculated after documented changes. Remaining gaps still apply.</p></div>${statusChip('Updated', 'done')}</div><div class="risk-change"><div><span>Baseline</span><strong>${p.baseline}<small>/100</small></strong>${badge(category(p.baseline), 'elevated')}</div><span class="risk-arrow">→</span><div><span>Updated</span><strong>${p.score}<small>/100</small></strong>${badge(category(p.score), 'moderate')}</div></div><div class="change-explainer"><strong>What changed</strong><p>Two observable changes were confirmed in prepared sample evidence. This is a 24-point illustrative index change, not a change in fire probability or expected losses.</p></div><div class="remaining-list"><strong>Still unresolved</strong><p>${icon('clock')}Wider vegetation assessment</p><p>${icon('clock')}Roof and vent specifications</p></div>${footer('Build insurance-ready report', 'open-report-builder', 'Next: inspect packet, approve details, then choose how to share.')}</div>` : `<div class="empty-stage"><h3>Updated risk comes after verification</h3><p>${p.id === 'oakridge' ? 'Review documented changes first. Uploading a file alone never changes modeled score.' : 'Oakridge House contains complete prepared evidence for this demo path.'}</p>${button(p.id === 'oakridge' ? 'Go to verification' : 'Continue demo with Oakridge', p.id === 'oakridge' ? 'open-evidence' : 'continue-oakridge-verify', 'primary', p.id === 'oakridge' ? 'camera' : 'arrow')}</div>`;
+  return ready ? `<div class="updated-risk-panel"><div class="panel-intro"><div><h3>Assessment after review</h3><p>Two mitigation actions verified in this demonstration. Surrounding exposure and unresolved assessment items remain.</p></div>${statusChip('Review complete', 'done')}</div><div class="assessment-comparison"><div><strong>Observable concerns addressed</strong><p>Near-building vegetation and stored items: change verified.</p></div><div><strong>Actions verified</strong><p>${verifiedCount(p)} of ${p.actions.length} recommended actions verified in demo.</p></div><div><strong>Remaining exposure</strong><p>${e(exposureCategory(p))} · illustrative surrounding exposure category remains unchanged.</p></div><div><strong>Outstanding evidence</strong><p>Wider vegetation assessment; roof and vent specifications.</p></div></div>${footer('Build assessment report', 'open-report-builder', 'Report preserves baseline and follow-up assessment snapshots.')}</div>` : `<div class="empty-stage"><h3>Assessment after review comes after verification</h3><p>${p.id === 'oakridge' ? 'Review documented changes first. Uploading a file alone never changes exposure.' : 'Oakridge House contains complete prepared evidence for this demo path.'}</p>${button(p.id === 'oakridge' ? 'Go to verification' : 'Continue demo with Oakridge', p.id === 'oakridge' ? 'open-evidence' : 'continue-oakridge-verify', 'primary', p.id === 'oakridge' ? 'camera' : 'arrow')}</div>`;
 }
 export function reportBuilder(p) {
   const ready = p.reports.length > 0;
-  return ready ? `<div class="report-builder"><div class="panel-intro"><div><h3>Build insurer-ready report</h3><p>One structured packet. Owner reviews it before sharing.</p></div>${statusChip('Ready', 'done')}</div><div class="packet-outline"><p>${icon('check')}Property and updated risk summary</p><p>${icon('check')}Verified before/after evidence and dates</p><p>${icon('check')}Outstanding actions and evidence gaps</p><p>${icon('check')}Owner review before insurer email draft</p></div>${footer('Open insurance-ready report', 'open-report', 'Nothing sends automatically. Insurer decides acceptance, pricing, eligibility, and coverage.')}</div>` : `<div class="empty-stage"><h3>Report builds after updated risk</h3><p>${p.id === 'oakridge' ? 'Finish verification to generate an insurer-ready packet.' : 'Continue Oakridge to see full updated-risk and report journey.'}</p>${button(p.id === 'oakridge' ? 'Go to verification' : 'Continue demo with Oakridge', p.id === 'oakridge' ? 'open-evidence' : 'continue-oakridge-verify', 'primary', p.id === 'oakridge' ? 'camera' : 'arrow')}</div>`;
+  return ready ? `<div class="report-builder"><div class="panel-intro"><div><h3>Build assessment report</h3><p>Structured demonstration output for owner and operator review.</p></div>${statusChip('Ready', 'done')}</div><div class="packet-outline"><p>${icon('check')}Exposure category, scope, basis, and limitations</p><p>${icon('check')}Observed findings and verified actions</p><p>${icon('check')}Evidence dates and information not assessed</p><p>${icon('check')}Simulated human operator review record</p></div>${footer('Open assessment report', 'open-report', 'Generated output remains illustrative. No automatic sharing.')}</div>` : `<div class="empty-stage"><h3>Report builds after review</h3><p>${p.id === 'oakridge' ? 'Finish verification to generate an assessment report.' : 'Continue Oakridge to see full assessment journey.'}</p>${button(p.id === 'oakridge' ? 'Go to verification' : 'Continue demo with Oakridge', p.id === 'oakridge' ? 'open-evidence' : 'continue-oakridge-verify', 'primary', p.id === 'oakridge' ? 'camera' : 'arrow')}</div>`;
 }
 export function nextStep(p, tab) {
   const phase = phaseFor(tab);

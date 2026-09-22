@@ -1,6 +1,12 @@
 export const BASELINE_DATE = '2026-08-15';
 export const FOLLOWUP_DATE = '2026-09-15';
-export const SCORE_DEFINITION = 'Illustrative composite index. Higher values indicate greater modeled concern. This is not a probability of fire, an insurance quote, or a validated loss estimate.';
+export const ASSESSMENT_NOTICE = 'The prototype uses illustrative data and categories. It does not estimate a calibrated probability of fire or expected financial loss.';
+export const assessmentRules = Object.freeze({
+  exposure: 'Environmental exposure and property mitigation are separate. Verified work never automatically changes surrounding exposure.',
+  evidence: 'Evidence received is not evidence accepted. Unsupported conditions remain unassessed or limited.',
+  verification: 'Verification confirms specific observable changes in reviewed evidence. It does not establish a reduction in future losses.',
+  refresh: 'Demo assumption: evidence refresh needs are identified case by case pending expert review; original evidence dates remain visible.',
+});
 export const scheduleTemplate = [
   'Document baseline conditions and obtain contractor advice where needed.',
   'Address accessible combustible items and agreed near-building vegetation work.',
@@ -48,17 +54,21 @@ export function createInitialState() {
   return { version: 1, selected: 'oakridge', dirty: false, conversations: {}, properties: specs.map(([id, name, lat, lng, score, workflow, type]) => {
     const obs = observations[id].map(([title, source, status, kind, action], i) => ({ id: `${id}-obs-${i}`, title, source, status, kind, action }));
     const relevant = id === 'oakridge' || id === 'ridgeway' ? ['A','B','C','D'] : id === 'valley' ? ['B','C','D'] : ['A','C','D'];
+    const exposureCategory = id === 'meadow' ? 'Lower' : id === 'valley' ? 'Moderate' : 'Elevated';
     return { id, name, lat, lng, score, baseline: score, workflow, type, location: 'Sonoma County, California', assessmentDate: BASELINE_DATE,
-      observations: obs, actions: actions.filter(a => relevant.includes(a.id)).map(a => ({ ...a, reason: a.id === 'D' ? a.reason : `${obs.find(o => o.action === a.id)?.title || a.reason}. ${a.id === 'C' ? 'Work must respect property boundaries and applicable requirements.' : 'Document the condition and obtain advice where needed.'}`, owner: 'Property owner', target: '', note: '', status: id === 'cedar' && a.id === 'A' ? 'In progress' : id === 'valley' && a.id === 'B' ? 'Evidence submitted' : a.status })),
+      exposureAssessment: { propertyId: id, category: exposureCategory, assessmentDate: BASELINE_DATE, geographicScope: 'Illustrative surrounding landscape context near this fictional property', sourceReferences: ['Illustrative aerial context', 'Sample geographic context'], drivers: ['Vegetation continuity beyond the parcel', 'Illustrative landscape context'], limitations: 'Sample overlays only. Not an official hazard map or validated model.', assessmentMethod: 'Seeded illustrative category', isIllustrative: true, reviewStatus: 'Reviewed for demo' },
+      observations: obs.map(o => ({ ...o, propertyId: id, propertyArea: o.action === 'A' ? 'Near building' : o.action === 'B' ? 'Exterior wall area' : 'Surrounding parcel context', observedAt: BASELINE_DATE, limitations: o.kind === 'context' ? 'Context does not verify small construction details.' : 'Based on available sample evidence.', findingStatus: o.kind === 'context' ? 'Additional evidence needed' : o.status.includes('Submitted') ? 'Additional evidence needed' : 'Observed concern' })), actions: actions.filter(a => relevant.includes(a.id)).map(a => ({ ...a, propertyId: id, rationale: a.reason, requiredEvidence: a.required, submittedEvidenceIds: [], verificationRecordId: null, reason: a.id === 'D' ? a.reason : `${obs.find(o => o.action === a.id)?.title || a.reason}. ${a.id === 'C' ? 'Work must respect property boundaries and applicable requirements.' : 'Document the condition and obtain advice where needed.'}`, owner: 'Property owner', target: '', note: '', status: id === 'cedar' && a.id === 'A' ? 'In progress' : id === 'valley' && a.id === 'B' ? 'Evidence submitted' : a.status })),
       evidence: obs.map((o, i) => ({ id: `${id}-evidence-${i}`, name: o.title, source: o.source, action: o.action, date: BASELINE_DATE, status: id === 'valley' && o.action === 'B' ? 'Submitted — review pending' : 'Baseline sample', prepared: false })),
-      verification: 'Not reviewed', history: [], reports: [], schedule: null, budget: '', prepared: false,
+      verification: 'Not reviewed', verificationRecords: [], correctionRequests: [], history: [], reports: [], schedule: null, budget: '', prepared: false,
     };
   }) };
 }
 export const category = score => score < 40 ? 'Lower' : score < 60 ? 'Moderate' : 'Elevated';
+export const exposureCategory = p => p.exposureAssessment?.category || 'Not assessed';
+export const evidenceCoverage = p => ({ label: 'Partial', scope: 'Observable property conditions and current mitigation evidence', received: p.evidence.length, reviewed: p.evidence.filter(e => e.status === 'Verified in demo' || e.status === 'Baseline sample').length, outstanding: ['Wider vegetation assessment', 'Roof and vent specifications'], professionalInspection: ['Roof and vent specifications'] });
 export const verifiedCount = p => p.actions.filter(a => a.status === 'Verified in demo').length;
 export const pendingReview = p => p.evidence.some(e => e.status === 'Submitted — review pending' || e.status === 'Prepared — review pending');
-export const summary = properties => ({ total: properties.length, elevated: properties.filter(p => category(p.score) === 'Elevated').length, pending: properties.filter(pendingReview).length, verified: properties.filter(p => verifiedCount(p) > 0).length });
+export const summary = properties => ({ total: properties.length, elevated: properties.filter(p => exposureCategory(p) === 'Elevated').length, pending: properties.filter(pendingReview).length, verified: properties.filter(p => verifiedCount(p) > 0).length, incomplete: properties.filter(p => evidenceCoverage(p).label !== 'Sufficient for the stated assessment scope').length });
 export const unresolved = p => p.actions.filter(a => a.status !== 'Verified in demo');
 export const observationResolved = (p, observation) => p.actions.some(action => action.id === observation.action && action.status === 'Verified in demo');
 export function refreshWorkflow(p) {
@@ -96,11 +106,15 @@ export function applyReview(p) {
   if (p.id !== 'oakridge' || !p.prepared || p.verification === 'Verified in demo') return false;
   for (const a of p.actions) if (['A', 'B'].includes(a.id)) a.status = 'Verified in demo';
   for (const e of p.evidence) if (e.prepared) e.status = 'Verified in demo';
-  p.score = 58; p.assessmentDate = FOLLOWUP_DATE; p.workflow = 'Follow-up needed'; p.verification = 'Verified in demo';
+  for (const o of p.observations) if (['A', 'B'].includes(o.action)) o.findingStatus = 'Change verified';
+  p.actions.filter(a => ['A','B'].includes(a.id)).forEach(a => { a.verificationRecordId = `verification-${a.id}`; a.submittedEvidenceIds = [`prepared-${a.id}`]; });
+  p.verificationRecords.push(...['A','B'].map(id => ({ id: `verification-${id}`, actionId: id, reviewedAt: FOLLOWUP_DATE, reviewMethod: 'Simulated human operator review using prepared demonstration evidence', result: 'Change verified', evidenceIds: [`prepared-${id}`], reviewerType: 'Demo operator', limitations: 'Specific observable change only.', isSimulated: true })));
+  p.assessmentDate = FOLLOWUP_DATE; p.workflow = 'Follow-up needed'; p.verification = 'Verified in demo';
   p.history.push({ date: FOLLOWUP_DATE, text: 'Simulated review of prepared evidence: vegetation change and stored-item removal confirmed. Wider vegetation and roof/vent details unresolved.' });
   p.reports.push({ id: 'oakridge-mitigation-2026-09-15', date: FOLLOWUP_DATE });
   return true;
 }
 export function reportSummary(p) {
-  return { title: 'TerraShield — Illustrative demo report', fictionalRecord: true, property: p.name, id: p.id, approximateAnchor: [p.lat, p.lng], baselineDate: BASELINE_DATE, followupDate: FOLLOWUP_DATE, baselineScore: p.baseline, updatedModeledScore: p.score, scoreDefinition: SCORE_DEFINITION, verifiedChanges: p.actions.filter(a => a.status === 'Verified in demo').map(a => a.fullTitle), outstandingActions: unresolved(p).map(a => ({ title: a.fullTitle, requiredEvidence: a.required })), evidence: p.evidence.map(({ id, name, source, action, date, status }) => ({ id, name, source, action, date, status })), reviewMethod: 'Simulated review using prepared demonstration evidence', ownerReview: p.insurancePacket ? { confirmed: true, insurerName: p.insurancePacket.insurerName, insurerEmail: p.insurancePacket.insurerEmail } : { confirmed: false }, closingNote: 'This report documents sample mitigation evidence and an illustrative modeled assessment. It does not certify the property, guarantee future safety, or determine insurance pricing or coverage.' };
+  return { title: 'TerraShield — Illustrative demonstration assessment report', fictionalRecord: true, property: p.name, id: p.id, approximateAnchor: [p.lat, p.lng], baselineDate: BASELINE_DATE, followupDate: FOLLOWUP_DATE, methodologyVersion: 'Demo methodology v1.0', exposureAssessment: p.exposureAssessment, findings: p.observations, mitigationSummary: { verified: verifiedCount(p), recommended: p.actions.length }, evidenceSummary: evidenceCoverage(p), verifiedChanges: p.actions.filter(a => a.status === 'Verified in demo').map(a => a.fullTitle), outstandingActions: unresolved(p).map(a => ({ title: a.fullTitle, requiredEvidence: a.required })), evidence: p.evidence.map(({ id, name, source, action, date, status }) => ({ id, name, source, action, date, status })), reviewMethod: 'Simulated human operator review using prepared demonstration evidence', isIllustrative: true, closingNote: 'This demonstration report documents sample evidence and an illustrative assessment. It does not certify the property, guarantee future safety, or determine insurance pricing or coverage.' };
 }
+export function requestCorrection(p, findingId, note) { const finding = p.observations.find(o => o.id === findingId); if (!finding || !note?.trim()) return false; finding.findingStatus = 'Review requested'; p.correctionRequests.push({ id: `correction-${crypto.randomUUID()}`, findingId, note: note.trim(), requestedAt: new Date().toISOString().slice(0,10), status: 'Review requested' }); return true; }
