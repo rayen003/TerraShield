@@ -25,7 +25,7 @@ test('complete live pitch journey and reset', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Start work', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Close assistant' }).click();
   await page.getByRole('button', { name: 'Start work', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'Act', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Intervention', exact: true })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('button', { name: 'Mark demo work done', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Continue to verification', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Continue to verification', exact: true }).click();
@@ -33,11 +33,14 @@ test('complete live pitch journey and reset', async ({ page }) => {
   await page.getByRole('button', { name: '1. Load prepared evidence', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Still unverified');
   await page.getByRole('button', { name: 'Apply simulated review result', exact: true }).click();
-  await expect(page.locator('.review-success')).toContainText('82 → 58');
-  await page.getByRole('tab', { name: 'Overview', exact: true }).click();
+  await expect(page.locator('.updated-risk-panel')).toContainText('82');
+  await expect(page.locator('.updated-risk-panel')).toContainText('58');
+  await page.getByRole('tab', { name: 'Risk', exact: true }).click();
   await expect(page.locator('.observation .status-chip.done')).toHaveCount(2);
   await expect(page.locator('.score-value')).toHaveText('58/100');
-  await page.getByRole('button', { name: 'View mitigation report', exact: true }).click();
+  await page.getByRole('button', { name: 'See updated risk', exact: true }).click();
+  await page.getByRole('button', { name: 'Build insurance-ready report', exact: true }).click();
+  await page.getByRole('button', { name: 'Open insurance-ready report', exact: true }).click();
   await expect(page.locator('.report-document')).toContainText('Illustrative demo report');
   await expect(page.locator('.report-outstanding')).toHaveCount(2);
   await page.getByRole('button', { name: 'Review insurance packet', exact: true }).click();
@@ -75,14 +78,14 @@ test('local uploads, property selection, filters, controls and mobile layout', a
   await page.getByText('Map layers', { exact: true }).click();
   await page.getByLabel('Surrounding vegetation', { exact: true }).uncheck();
   await page.getByLabel('Surrounding vegetation', { exact: true }).check();
-  await page.getByRole('tab', { name: 'Verify', exact: true }).click();
+  await page.getByRole('tab', { name: 'Verification', exact: true }).click();
   await page.getByText('Upload your own evidence', { exact: true }).click();
   await page.locator('#evidence-file').setInputFiles({ name: 'sample.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jN7sAAAAASUVORK5CYII=', 'base64') });
   await page.getByRole('button', { name: 'Submit evidence for review', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Submitted — review pending');
   await expect(page.getByRole('dialog').getByRole('img')).toBeVisible();
   await page.getByRole('button', { name: 'Close dialog' }).click();
-  await page.getByRole('tab', { name: 'Overview', exact: true }).click();
+  await page.getByRole('tab', { name: 'Risk', exact: true }).click();
   await expect(page.locator('.score-value')).toHaveText('82/100');
   for (const [id, name, score] of [['cedar','Cedar Grove Home',67],['valley','Valley View Residence',45],['meadow','Meadow Lane Home',28],['ridgeway','Ridgeway Lodge',74]]) {
     await switchProperty(page, id, name);
@@ -110,7 +113,7 @@ test('local uploads, property selection, filters, controls and mobile layout', a
 test('editable plans, unsupported uploads, map selection and offline fallback', async ({ page }) => {
   await page.route('https://tile.openstreetmap.org/**', route => route.abort());
   await page.goto('/');
-  await page.getByRole('button', { name: 'Review action plan', exact: true }).click();
+  await page.getByRole('button', { name: 'Review recommendation', exact: true }).click();
   await page.locator('#action-A > summary').click();
   const action = page.locator('#action-A');
   await action.getByText('Assignee, date & notes Optional', { exact: true }).click();
@@ -128,13 +131,13 @@ test('editable plans, unsupported uploads, map selection and offline fallback', 
   await page.getByLabel('Budget (USD)', { exact: true }).fill('2500');
   await page.locator('.budget-box').getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Continue to work', exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'Act', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Intervention', exact: true })).toHaveAttribute('aria-selected', 'true');
   await page.reload();
-  await page.getByRole('tab', { name: 'Action plan', exact: false }).click();
+  await page.getByRole('tab', { name: 'Recommendation', exact: true }).click();
   await page.getByText('Schedule & budget Optional', { exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Week 1', exact: true })).toHaveValue('Photograph baseline and arrange advice.');
   await expect(page.getByLabel('Budget (USD)', { exact: true })).toHaveValue('2500');
-  await page.getByRole('tab', { name: 'Verify', exact: true }).click();
+  await page.getByRole('tab', { name: 'Verification', exact: true }).click();
   await page.getByText('Upload your own evidence', { exact: true }).click();
   await page.locator('#evidence-file').setInputFiles({ name: 'unsupported.txt', mimeType: 'text/plain', buffer: Buffer.from('demo') });
   await page.getByRole('button', { name: 'Submit evidence for review', exact: true }).click();
@@ -177,15 +180,15 @@ test('street tiles are default, attributed, and switch cleanly to schematic', as
 test('property panel is sole phase navigation', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('tablist', { name: 'Property details' })).toHaveCount(1);
-  await expect(page.getByRole('tab')).toHaveText(['Overview', 'Action plan', 'Act', 'Verify']);
+  await expect(page.getByRole('tab')).toHaveText(['Risk', 'Recommendation', 'Intervention', 'Verification', 'Updated risk', 'Report']);
   await expect(page.locator('.journey')).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Action plan', exact: true }).click();
+  await page.getByRole('tab', { name: 'Recommendation', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Use recommended plan', exact: true })).toBeVisible();
   await expect(page.locator('.planning-options')).not.toHaveAttribute('open', '');
   await page.getByRole('button', { name: 'Use recommended plan', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Start work', exact: true })).toBeVisible();
   await switchProperty(page, 'cedar', 'Cedar Grove Home');
-  await page.getByRole('tab', { name: 'Act', exact: true }).click();
+  await page.getByRole('tab', { name: 'Intervention', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Continue to verification', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Mark work done', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Continue to verification', exact: true })).toBeVisible();

@@ -1,7 +1,7 @@
 import './styles.css';
 import './guided-workspace.css';
 import { createInitialState, category, summary, unresolved, verifiedCount, pendingReview, loadPrepared, applyReview, reportSummary, BASELINE_DATE, FOLLOWUP_DATE, SCORE_DEFINITION, scheduleTemplate, useRecommendedPlan, startWork, markOwnerComplete, priorityActions, refreshWorkflow } from './data.js';
-import { overview, actionPlan, actView, evidence, comparison, nextStep } from './workspace-ui.js';
+import { overview, actionPlan, actView, evidence, updatedRisk, reportBuilder, comparison, nextStep } from './workspace-ui.js';
 import { propertyPhases } from './phases.js';
 import { icon, escape as e } from './icons.js';
 import { mountMap, destroyMap } from './map.js';
@@ -62,7 +62,7 @@ function propertySwitcher(p) {
   </div>`;
 }
 function workspace(p) {
-  const contents = { overview, plan: actionPlan, act: actView, evidence };
+  const contents = { overview, plan: actionPlan, act: actView, evidence, 'updated-risk': updatedRisk, report: reportBuilder };
   return `<main class="workspace-main">
     <div class="page-heading"><div><div class="breadcrumb">Your properties <span>/</span> Property workspace</div><h1>Your property, one step at a time.</h1><p>See the risks. Make a plan. Show your progress.</p></div>${btn('Ask TerraShield','assistant','assistant-trigger','spark')}</div>
     <div class="workspace-grid"><div class="map-column">${mapMarkup()}<div class="map-caption"><span>Fictional property records · Approximate locations</span></div>${nextStep(p, tab)}</div>
@@ -198,7 +198,9 @@ app.addEventListener('click', event => {
     case 'create-schedule': p.schedule ||= [...scheduleTemplate]; useRecommendedPlan(p); save('Four-week planning template created.'); render(); document.querySelector('.planning-options').open = true; break;
     case 'load-prepared': if (loadPrepared(p)) { save('Prepared demo evidence loaded. Review the summary before applying.'); render(); reviewModal(); } break;
     case 'review-prepared': reviewModal(); break;
-    case 'apply-review': if (applyReview(p)) { save('Simulated review complete. Two changes verified; modeled index updated to 58.'); render(); } break;
+    case 'apply-review': if (applyReview(p)) { save('Simulated review complete. Two changes verified; modeled index updated to 58.'); openTab('updated-risk'); } break;
+    case 'open-updated-risk': openTab('updated-risk'); break;
+    case 'open-report-builder': openTab('report'); break;
     case 'open-report': if (p.reports.length) { view = 'report'; render(); } else toast('A report becomes available after the prepared review.'); break;
     case 'review-insurance-packet': insurancePacketModal(p); break;
     case 'prepare-insurer-email': insurerEmailDraft(p); break;
