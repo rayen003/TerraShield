@@ -92,6 +92,11 @@ test('local uploads, property selection, filters, controls and mobile layout', a
     await expect(page.locator('.score-value')).toHaveText(`${score}/100`);
     await expect(page.locator('.property-marker.selected')).toHaveAttribute('title', new RegExp(id === 'ridgeway' ? 'Ridgeway' : id[0].toUpperCase()+id.slice(1)));
   }
+  await page.getByRole('tab', { name: 'Verification', exact: true }).click();
+  await expect(page.locator('.demo-route')).toContainText('Full demo path');
+  await page.getByRole('button', { name: 'Continue demo with Oakridge', exact: true }).click();
+  await expect(page.locator('.property-name-row h2')).toHaveText('Oakridge House');
+  await expect(page.locator('.verification-path')).toContainText('Get your final report');
   await page.getByRole('button', { name: 'Portfolio', exact: true }).click();
   await page.getByLabel('Search properties', { exact: true }).fill('Valley');
   await expect(page.locator('tbody tr')).toHaveCount(1);
