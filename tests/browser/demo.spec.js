@@ -29,7 +29,8 @@ test('complete live pitch journey and reset', async ({ page }) => {
   await page.getByRole('button', { name: 'Mark demo work done', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Continue to verification', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Continue to verification', exact: true }).click();
-  await page.getByRole('button', { name: 'Load prepared demo evidence', exact: true }).click();
+  await expect(page.locator('.verification-path')).toContainText('Get your final report');
+  await page.getByRole('button', { name: '1. Load prepared evidence', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Still unverified');
   await page.getByRole('button', { name: 'Apply simulated review result', exact: true }).click();
   await expect(page.locator('.review-success')).toContainText('82 → 58');
