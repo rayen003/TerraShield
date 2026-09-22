@@ -1,0 +1,27 @@
+const paths = {
+  shield: '<path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z"/><path d="m8 12 3 3 5-6"/>',
+  home: '<path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/>',
+  layers: '<path d="m12 3 10 6-10 6L2 9Z"/><path d="m2 13 10 6 10-6M2 17l10 6 10-6"/>',
+  report: '<path d="M6 3h9l4 4v14H6Z"/><path d="M14 3v5h5M9 12h7M9 16h7"/>',
+  arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
+  spark: '<path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4Z"/>',
+  reset: '<path d="M3 10a9 9 0 1 1 1 7M3 4v6h6"/>',
+  pin: '<path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/>',
+  tree: '<path d="m12 2 7 9h-4l5 7H4l5-7H5l7-9Zm0 16v4"/>',
+  box: '<path d="m3 7 9-4 9 4v11l-9 4-9-4ZM3 7l9 5 9-5M12 12v10"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/>',
+  check: '<path d="m5 12 4 4L19 6"/>',
+  alert: '<path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5M12 17v1"/>',
+  close: '<path d="m6 6 12 12M6 18 18 6"/>',
+  camera: '<path d="M3 7h5l2-3h4l2 3h5v13H3Z"/><circle cx="12" cy="13" r="4"/>',
+  upload: '<path d="M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 11h18"/>',
+  target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/>',
+  search: '<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',
+  download: '<path d="M12 3v13m-5-5 5 5 5-5M4 17v4h16v-4"/>',
+  print: '<path d="M6 9V3h12v6M6 17H3V9h18v8h-3M6 14h12v7H6Z"/>',
+  chevron: '<path d="m8 5 7 7-7 7"/>',
+};
+export function icon(name, cls = '') { return `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.info}</svg>`; }
+export function escape(value = '') { return String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
