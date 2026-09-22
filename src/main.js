@@ -201,6 +201,7 @@ app.addEventListener('click', event => {
     case 'apply-review': if (applyReview(p)) { save('Simulated review complete. Two changes verified; modeled index updated to 58.'); openTab('updated-risk'); } break;
     case 'open-updated-risk': openTab('updated-risk'); break;
     case 'open-report-builder': openTab('report'); break;
+    case 'continue-oakridge-verify': state.selected='oakridge'; view='workspace'; tab='evidence'; save('Oakridge full demo opened at verification.'); render(); break;
     case 'open-report': if (p.reports.length) { view = 'report'; render(); } else toast('A report becomes available after the prepared review.'); break;
     case 'review-insurance-packet': insurancePacketModal(p); break;
     case 'prepare-insurer-email': insurerEmailDraft(p); break;
